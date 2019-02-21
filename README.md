@@ -40,7 +40,7 @@ library(caret)
 ```r
 library(ggplot2)
 
-setwd("C:/Users/601459542/OneDrive - BT Plc/Documents/Visual Studio 2017/BIDs/Data Science Coursera/Prediction Assignment Writeup")
+setwd("C:/Data Science Coursera/Prediction Assignment Writeup")
 
 ## Download Files 
 # fileUrl_train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
