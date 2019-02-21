@@ -1,4 +1,13 @@
-
+---
+title: "Prediction Assignment Writeup"
+author: "Nicolas Flinta"
+date: "21 Feb 2019"
+output:
+  #pdf_document: default
+  html_document:
+    keep_md: yes
+    self_contained: yes
+---
 
 # Executive Summary
 
