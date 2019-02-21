@@ -1,0 +1,128 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Nicolas Flinta"
+date: "21 Feb 2019"
+output:
+  #pdf_document: default
+  html_document:
+    keep_md: yes
+    self_contained: yes
+---
+
+# Executive Summary
+
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. 
+
+### Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Exploratory Data Analysis
+
+Download the data.
+
+```{r, echo=TRUE}
+## Download the testing and training datasets and open them as data tables
+library(caret)
+library(ggplot2)
+
+setwd("C:/Data Science Coursera/Prediction Assignment Writeup")
+
+## Download Files 
+# fileUrl_train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+# fileUrl_test <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+# download.file(fileUrl_train, destfile = paste0(getwd(), '/pml-training.csv'))
+# download.file(fileUrl_test, destfile = paste0(getwd(), '/pml-testing.csv'))
+
+## Load traininf data into data frame
+activity_data_train_all <- read.csv("pml-training.csv")
+```
+
+Split training data set (75/25) for validation purposes.
+
+```{r, echo=TRUE}
+## Save some data observations as validation set
+dpart <- createDataPartition(activity_data_train_all$classe, p = 0.25, list = F)
+activity_data_train <- activity_data_train_all[-dpart,]
+activity_data_validation <- activity_data_train_all[dpart,]
+
+
+## Summarise the data for training model.
+# summary(activity_data_train) <<< Commented to reduce the lenght of the markdown.
+```
+
+Remove columns with NA and factors (by keeping only numerical variables) as they will not be related to the Classe variable.
+
+```{r, echo=TRUE}
+## Delete all NA columns from the data
+col_with_na <- numeric()
+for (i in 1:length(activity_data_train)) {
+    if (any(is.na(activity_data_train[i]))) { col_with_na <- append(col_with_na, i) }
+
+}
+activity_data_train <- activity_data_train[-col_with_na]
+
+## Keep only numerical variables and append the classe variable to the data frame
+is.num <- sapply(activity_data_train, is.numeric)
+num.df <- activity_data_train[, is.num]
+
+## Remove participant names and dates
+num.df <- num.df[-(1:4)]
+num.df$classe <- activity_data_train$classe
+activity_data_train <- num.df
+```
+
+## Model Training
+
+### Model 0
+For classification and regression using Classification Tree (method rpart).
+```{r, echo=TRUE}
+set.seed(12345)
+rf_model_0 <- train(classe ~ ., data = activity_data_train, method = "rpart")
+print(rf_model_0)
+```
+
+Accuracy of the model is *51.56%*, which is a good place to start but not great for predicting the 'classe' dependent variable.
+
+### Model 1
+Second model I used RandomForest (method = "rf") in the Caret package. Also using cross validation with 5 k-folds.
+
+```{r, echo=TRUE}
+set.seed(12345)
+rf_model_1 <- train(classe ~ ., data = activity_data_train, method = "rf",
+                trControl = trainControl(method = "cv", number = 5),
+                prox = TRUE, allowParallel = TRUE)
+print(rf_model_1)
+```
+
+The second model using Random Forest with cross validations gives me a 99.15% accuracy (I wish my real life models were like this!).
+
+## Model Testing
+
+### Model 0
+```{r, echo=TRUE}
+prediction_0 <- predict(rf_model_0, activity_data_validation)
+# You can use the prediction to compute the confusion matrix and see the accuracy score
+confusionMatrix(prediction_0, activity_data_validation$classe)
+```
+
+Using the Validation data set we see the accuracy is 49% and that the model performs better for certain classes but not great overall.
+
+### Model 1
+```{r, echo=TRUE}
+prediction_1 <- predict(rf_model_1, activity_data_validation)
+# You can use the prediction to compute the confusion matrix and see the accuracy score
+confusionMatrix(prediction_1, activity_data_validation$classe)
+```
+
+WOW! 99.29% accuracy and a very well balanced accuracy accross all classes.
+
+## Prediction on Test set
+
+Predicting the class for each 'problem_id' in the test dataset.
+
+```{r, echo=TRUE}
+activity_data_test <- read.csv("pml-testing.csv")
+prediction_answers_1 <- predict(rf_model_1, activity_data_test)
+validation_results <- data.frame(problem_id = activity_data_test$problem_id, predicted = prediction_answers_1)
+print(validation_results)
+```
